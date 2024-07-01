@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const connectDB = require('../connection');
+const pool = require('../connection');
 const bodyParser = require('body-parser');
 
 // Use body-parser middleware in the router with increased limit
@@ -9,8 +9,9 @@ router.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
 router.get('/', async (req, res) => {
   try {
-    const connection = await connectDB();
+    const connection = await pool.getConnection();
     const [postsResults] = await connection.query('SELECT `id`, `title`, `author`, `updated_at`, `category`,`image` FROM `posts` WHERE 1');
+    connection.release();
     res.json(postsResults);
   } catch (error) {
     console.error(error);
@@ -22,8 +23,9 @@ router.get('/:id', async (req, res) => {
   const postId = req.params.id;
 
   try {
-    const connection = await connectDB();
+    const connection = await pool.getConnection();
     const [postResults] = await connection.query('SELECT * FROM `posts` WHERE id = ?', [postId]);
+    connection.release();
 
     if (postResults.length === 0) {
       return res.status(404).json({ error: 'Post not found' });
@@ -49,13 +51,14 @@ router.post('/addposts', async (req, res) => {
   } = req.body;
 
   try {
-    const connection = await connectDB();
+    const connection = await pool.getConnection();
     const query = `
       INSERT INTO posts (title, content, author, created_at, updated_at, category, tags, image)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
     const values = [title, content, author, created_at, updated_at, category, tags, image];
     await connection.query(query, values);
+    connection.release();
 
     res.status(201).json({ message: 'Post added successfully' });
   } catch (error) {
@@ -77,7 +80,7 @@ router.put('/:id', async (req, res) => {
   } = req.body;
 
   try {
-    const connection = await connectDB();
+    const connection = await pool.getConnection();
     const query = `
       UPDATE posts
       SET title = ?, content = ?, author = ?, updated_at = ?, category = ?, tags = ?, image = ?
@@ -85,6 +88,7 @@ router.put('/:id', async (req, res) => {
     `;
     const values = [title, content, author, updated_at, category, tags, image, postId];
     const [result] = await connection.query(query, values);
+    connection.release();
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Post not found' });
@@ -101,8 +105,9 @@ router.delete('/:id', async (req, res) => {
   const postId = req.params.id;
 
   try {
-    const connection = await connectDB();
+    const connection = await pool.getConnection();
     const [result] = await connection.query('DELETE FROM posts WHERE id = ?', [postId]);
+    connection.release();
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Post not found' });
