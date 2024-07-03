@@ -10,7 +10,7 @@ router.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 router.get('/', async (req, res) => {
   try {
     const connection = await pool.getConnection();
-    const [postsResults] = await connection.query('SELECT `id`, `title`, `author`, `updated_at`, `category`,`image` FROM `posts` WHERE 1');
+    const [postsResults] = await connection.query('SELECT `id`, `title`, `author`, `updated_at`, `category`,`image` FROM `posts` ORDER BY `id` DESC');
     connection.release();
     res.json(postsResults);
   } catch (error) {
